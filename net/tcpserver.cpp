@@ -86,25 +86,27 @@ void TcpServer::AcceptHandle() {
     struct sockaddr in_addr;
     socklen_t in_len = sizeof(in_addr);
 
-    int infd = accept(m_listenfd, &in_addr, &in_len);
-    if (-1 == infd) {
-        if ((errno == EAGAIN) || (errno == EWOULDBLOCK))
+    while (m_running) {
+        int infd = accept(m_listenfd, &in_addr, &in_len);
+        if (-1 == infd) {
+            if ((errno == EAGAIN) || (errno == EWOULDBLOCK))
+                return;
+            else {
+                ERROR("accept failed.");
+                return;
+            }
+        }
+        if (-1 == SetNonBlock(infd))
             return;
-        else {
-            ERROR("accept failed.");
+        struct epoll_event event;
+        event.data.fd = infd;
+        event.events = EPOLLIN | EPOLLET;
+        if (-1 == epoll_ctl(m_epollfd, EPOLL_CTL_ADD, infd, &event)) {
+            ERROR("epoll control add error %d.", errno);
             return;
         }
+        INFO("new socket %d accepted.", infd);
     }
-    if (-1 == SetNonBlock(infd))
-        return;
-    struct epoll_event event;
-    event.data.fd = infd;
-    event.events = EPOLLIN | EPOLLET;
-    if (-1 == epoll_ctl(m_epollfd, EPOLL_CTL_ADD, infd, &event)) {
-        ERROR("epoll control add error %d.", errno);
-        return;
-    }
-    INFO("new socket %d accepted.", infd);
 }
 
 void TcpServer::HandleSockErr(const int fd) {
@@ -127,6 +129,11 @@ void TcpServer::IOStart() {
     event.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
     if (-1 == epoll_ctl(m_epollfd, EPOLL_CTL_ADD, m_listenfd, &event)) {
         ERROR("epoll control listen error %d.", errno);
+        return;
+    }
+
+    if (-1 == listen(m_listenfd, SOMAXCONN)) {
+        ERROR("server socket listen error %d.", errno);
         return;
     }
 
@@ -172,11 +179,6 @@ int TcpServer::Start() {
 
     if (-1 == SetNonBlock(m_listenfd))
         return -1;
-
-    if (-1 == listen(m_listenfd, SOMAXCONN)) {
-        ERROR("server socket listen error %d.", errno);
-        return -1;
-    }
 
     if (-1 == (m_epollfd = epoll_create1(0))) {
         ERROR("epoll create error %d.", errno);
