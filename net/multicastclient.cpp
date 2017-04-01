@@ -8,7 +8,7 @@
 #include "multicastclient.hpp"
 #include "log.hpp"
 
-UdpClient::UdpClient(std::string addr, unsigned short port) {
+UdpClient::UdpClient(std::string localip, std::string addr, unsigned short port) {
     if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         printf("create multicast socket failed error %d.", errno);
         return;
@@ -25,7 +25,7 @@ UdpClient::UdpClient(std::string addr, unsigned short port) {
 
     memset(&srcaddr, 0, sizeof(srcaddr));
     srcaddr.sin_family = AF_INET;
-    srcaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    srcaddr.sin_addr.s_addr = INADDR_ANY;
     srcaddr.sin_port = htons(port);
 
     if (bind(fd, (struct sockaddr *)&srcaddr, sizeof(srcaddr)) < 0) {
@@ -35,7 +35,7 @@ UdpClient::UdpClient(std::string addr, unsigned short port) {
 
     struct ip_mreq mreq;
     mreq.imr_multiaddr.s_addr = inet_addr(addr.c_str());
-    mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+    mreq.imr_interface.s_addr = inet_addr(localip.c_str());
     if (setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0) {
         ERROR("set memship failed %d.", errno);
         return;

@@ -6,7 +6,7 @@
 
 class UdpSvr {
 public:
-    explicit UdpSvr(std::string addr, unsigned short port);
+    explicit UdpSvr(std::string localip, std::string addr, unsigned short port);
     virtual ~UdpSvr();
     void SendMsg(char *msg, int len);
 private:

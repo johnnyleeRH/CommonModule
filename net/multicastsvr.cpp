@@ -8,7 +8,7 @@
 #include "multicastsvr.hpp"
 #include "log.hpp"
 
-UdpSvr::UdpSvr(std::string addr, unsigned short port) {
+UdpSvr::UdpSvr(std::string localip, std::string addr, unsigned short port) {
     fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (-1 == fd) {
         ERROR("create multicast socket failed error %d.", errno);
@@ -19,6 +19,14 @@ UdpSvr::UdpSvr(std::string addr, unsigned short port) {
     destaddr.sin_family = AF_INET;
     destaddr.sin_addr.s_addr = inet_addr(addr.c_str());
     destaddr.sin_port = htons(port);
+
+    struct in_addr ethaddr = {0};
+    ethaddr.s_addr = inet_addr(localip.c_str());
+    if(-1 == setsockopt(fd, IPPROTO_IP, IP_MULTICAST_IF, (char *)&ethaddr, sizeof(ethaddr))) {
+        ERROR("set svr outgoing eth failed error %d.", errno);
+        close(fd);
+    }
+
 }
 
 UdpSvr::~UdpSvr() {

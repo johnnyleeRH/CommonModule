@@ -6,7 +6,7 @@
 
 class UdpClient {
 public:
-    UdpClient(std::string addr, unsigned short port);
+    explicit UdpClient(std::string localip, std::string addr, unsigned short port);
     virtual ~UdpClient();
     ssize_t RecvMsg(char*, int);
 
